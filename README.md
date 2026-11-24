@@ -14,6 +14,9 @@ explains the goal, the models, the results so far and what to try next.
 (base130, FT3, FT4; CC BY-NC-SA 4.0), with a standalone `modeling.py` that needs only torch, safetensors
 and tokenizers.
 
+**Try it:** [the Strudel DJ Space](https://huggingface.co/spaces/nenkoru/strudel-dj). The model runs in your
+browser (int8, about 130 MB downloaded once) and strudel.cc plays what it writes.
+
 ## Status (2026-11-24)
 
 - **Model.** `base130`: a 129M decoder (16 × 768, context 2048, BPE with 4096 tokens), pretrained on MIDI
@@ -34,6 +37,7 @@ This is research code, published as a work log. It is not a packaged library.
 | `transcribe/` | audio → loop: beat grid, Demucs stems, drums and pitched parts (own uv env) |
 | `tiny/` | the models: data prep, tokenizer, training (MLX and PyTorch), fine-tune data, generation, critic, DPO, taste model, Jamendo transcription |
 | `deckc/` | the deck pages: composition (`src/compose.mjs`), the browser engine, swipe batches, loudness levelling, card prerendering, the swipe page (`rate/index.html`) |
+| `space/` | the Hugging Face Space: the model in plain JavaScript over int8 weights (`model.mjs`, WebAssembly SIMD kernel `linear.wat`), its worker and page; `tiny/export_bin.py` writes the weights |
 | `mixxx/` | a Mixxx controller script that sends deck clocks as SysEx (experimental) |
 | `reports/`, `research_notes/` | evaluation reports and research notes (mostly in Russian) |
 | [NOTES.md](NOTES.md) | the full lab notebook: every step, with numbers |

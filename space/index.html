@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Strudel DJ</title>
+<meta name="description" content="A 129M-parameter model writes Strudel loops in your browser; strudel.cc plays them.">
+<style>
+  :root {
+    --bg: #f7f7f5; --card: #ffffff; --ink: #1d1d1f; --muted: #6b6b70; --line: #e2e2de;
+    --accent: #4f46e5; --accent-ink: #ffffff; --warn: #a15c00; --code-bg: #f1f1ee;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #121214; --card: #1b1b1f; --ink: #ececef; --muted: #9a9aa3; --line: #2c2c32;
+            --accent: #8b85ff; --accent-ink: #111; --warn: #f0b25a; --code-bg: #141417; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 960px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 26px; margin: 0 0 4px; letter-spacing: -0.01em; }
+  p { margin: 0 0 10px; }
+  a { color: var(--accent); }
+  .muted { color: var(--muted); font-size: 13.5px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-top: 16px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px 14px; }
+  label { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--muted); }
+  select, input { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line);
+                  border-radius: 6px; padding: 6px 8px; min-width: 0; }
+  input[type=range] { padding: 0; accent-color: var(--accent); }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 14px; }
+  button { font: inherit; border-radius: 7px; padding: 8px 14px; cursor: pointer;
+           border: 1px solid var(--line); background: var(--card); color: var(--ink); }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+  button:disabled { opacity: 0.5; cursor: default; }
+  progress { width: 100%; height: 6px; accent-color: var(--accent); }
+  #status { min-height: 1.5em; }
+  #status.warn { color: var(--warn); }
+  textarea { width: 100%; min-height: 220px; resize: vertical; font: 12.5px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+             color: var(--ink); background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px; }
+  iframe { width: 100%; height: 520px; border: 0; border-radius: 8px; background: #000; display: block; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Strudel DJ</h1>
+  <p>A 129M-parameter model (<a href="https://huggingface.co/nenkoru/strudel-dj-129m">strudel-dj-129m</a>) writes a
+    short <a href="https://strudel.cc">Strudel</a> program: drums, bass, chords and lead in one <code>stack(...)</code>.
+    The model runs in your browser, and the player below is strudel.cc itself.</p>
+  <p class="muted">The first run downloads about 130 MB of weights (int8), once; later visits load them from your
+    browser's cache. A program then takes roughly 5–30 s, depending on your computer.
+    Code: <a href="https://github.com/nenkoru/strudel-dj">github.com/nenkoru/strudel-dj</a> (AGPL-3.0) ·
+    <a href="https://blog.nenkoru.com/posts/strudel-guest-decks/">work report</a> · weights CC BY-NC-SA 4.0.
+    Built mostly by AI (Claude, Anthropic) under the author's direction.</p>
+
+  <section class="card">
+    <div class="grid">
+      <label>Model
+        <select id="variant">
+          <option value="ft3">ft3 (recommended)</option>
+          <option value="ft4">ft4 (better bass)</option>
+        </select>
+      </label>
+      <label>Key <select id="key"></select></label>
+      <label>Mode
+        <select id="mode"><option>minor</option><option>major</option></select>
+      </label>
+      <label>Style
+        <select id="style"><option>techno</option><option>house</option><option>prog</option></select>
+      </label>
+      <label>Bars <select id="bars"><option>4</option><option>8</option></select></label>
+      <label>Parts <select id="parts"><option>2</option><option selected>3</option><option>4</option></select></label>
+      <label>Tempo <span id="bpmv"></span><input id="bpm" type="range" min="100" max="150" step="1" value="130"></label>
+      <label>Temperature <span id="tempv"></span><input id="temp" type="range" min="0.5" max="1.2" step="0.05" value="0.9"></label>
+      <label>Seed (0 = random) <input id="seed" type="number" min="0" step="1" value="0"></label>
+    </div>
+    <div class="row">
+      <button id="go" class="primary">Write a program</button>
+      <button id="stop" class="hidden">Stop</button>
+      <span id="status" class="muted"></span>
+    </div>
+    <progress id="bar" class="hidden" max="1" value="0"></progress>
+  </section>
+
+  <section id="out" class="card hidden">
+    <textarea id="code" spellcheck="false" aria-label="Strudel code"></textarea>
+    <div class="row">
+      <button id="play">Load into the player</button>
+      <a id="open" target="_blank" rel="noopener">Open in strudel.cc</a>
+      <button id="copy">Copy code</button>
+      <span class="muted">In the player, press ▶ (or Ctrl+Enter); the first notes load samples for a few seconds.</span>
+    </div>
+    <iframe id="player" class="hidden" title="strudel.cc player" allow="autoplay; clipboard-write"></iframe>
+  </section>
+
+  <p class="muted" style="margin-top:16px">Known weak spots: the bass is often one note repeated, and the model
+    sometimes writes past the end of a pattern. If the brackets don't balance or it sounds off, try another seed.
+    The model picks its own tempo; the page replaces it with the slider's.</p>
+</main>
+
+<script type="module">
+const $ = (id) => document.getElementById(id);
+const KEYS = ['c', 'c#', 'd', 'eb', 'e', 'f', 'f#', 'g', 'ab', 'a', 'bb', 'b'];
+const BPM = { techno: 130, house: 124, prog: 124 };
+$('key').innerHTML = KEYS.map((k) => `<option${k === 'a' ? ' selected' : ''}>${k}</option>`).join('');
+const showRanges = () => { $('bpmv').textContent = $('bpm').value + ' BPM'; $('tempv').textContent = (+$('temp').value).toFixed(2); };
+$('bpm').oninput = $('temp').oninput = showRanges;
+$('style').onchange = () => { $('bpm').value = BPM[$('style').value]; showRanges(); };
+showRanges();
+
+let worker = null, loaded = null, busy = false, pending = null;
+
+function status(text, warn = false) { $('status').textContent = text; $('status').className = warn ? 'warn' : 'muted'; }
+const mb = (n) => (n / 1e6).toFixed(0);
+
+function startWorker(variant) {
+  worker?.terminate();
+  loaded = null;
+  worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
+  worker.onmessage = ({ data }) => handlers[data.type]?.(data);
+  worker.onerror = (e) => fail(e.message || 'the worker failed to start');
+  return new Promise((resolve, reject) => {
+    pending = { resolve, reject };
+    status(`Loading ${variant}…`);
+    worker.postMessage({ type: 'load', variant });
+  }).then((info) => { loaded = variant; return info; });
+}
+
+const handlers = {
+  progress: ({ loaded: l, total }) => {
+    $('bar').classList.remove('hidden');
+    $('bar').value = total ? l / total : 0;
+    status(`Downloading the weights: ${mb(l)}${total ? ' / ' + mb(total) : ''} MB (once; then cached)`);
+  },
+  ready: (d) => { $('bar').classList.add('hidden'); pending?.resolve(d); pending = null; },
+  token: ({ count, text }) => { $('code').value = text; status(`Writing… ${count} tokens`); },
+  done: (d) => { pending?.resolve(d); pending = null; },
+  error: ({ message }) => fail(message),
+};
+
+function fail(message) {
+  $('bar').classList.add('hidden');
+  pending?.reject(new Error(message)); pending = null;
+}
+
+function header() {
+  return `// key: ${$('key').value} ${$('mode').value} | style: ${$('style').value} | bars: ${$('bars').value} | parts: ${$('parts').value}\n`;
+}
+
+function withTempo(code, bpm) {  // the model sets its own tempo, often off for the style
+  const body = code.replace(/^\s*setcps\([^)]*\)\s*\n/gm, '').trim();
+  return `setcps(${bpm}/60/4)\n${body}\n`;
+}
+
+const balanced = (code) => [['(', ')'], ['[', ']'], ['<', '>']].every(([a, b]) => code.split(a).length === code.split(b).length);
+
+function shareUrl(code) {
+  const bytes = new TextEncoder().encode(code);
+  let bin = '';
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return 'https://strudel.cc/#' + encodeURIComponent(btoa(bin));
+}
+
+function setBusy(on) {
+  busy = on;
+  $('go').disabled = on;
+  $('stop').classList.toggle('hidden', !on);
+  $('code').readOnly = on;
+}
+
+async function write() {
+  if (busy) return;
+  setBusy(true);
+  const variant = $('variant').value;
+  try {
+    if (loaded !== variant) {
+      const info = await startWorker(variant);
+      if (info.backend !== 'wasm-simd') status('This browser has no WebAssembly SIMD: generation will be slow.', true);
+    }
+    const seed = +$('seed').value || Math.floor(Math.random() * 1e6);
+    const options = { temperature: +$('temp').value, topK: 40, maxTokens: 1600, seed };
+    $('out').classList.remove('hidden');
+    $('code').value = '';
+    status('Writing…');
+    const d = await new Promise((resolve, reject) => {
+      pending = { resolve, reject };
+      worker.postMessage({ type: 'generate', prompt: header(), options });
+    });
+    const tag = `// strudel-dj-129m ${variant} · ${$('key').value} ${$('mode').value} ${$('style').value} · seed ${seed}\n`;
+    const code = tag + withTempo(d.text, $('bpm').value);
+    $('code').value = code;
+    const roles = [...code.matchAll(/\/\/\s*(\w+)\s*$/gm)].map((m) => m[1]);
+    const notes = [];
+    if (!d.complete) notes.push('hit the length limit: probably cut off');
+    if (!balanced(code)) notes.push("brackets don't balance: try another seed");
+    status(`seed ${seed} · ${(d.ms / 1000).toFixed(1)} s · ${d.tokens} tokens · parts: ${roles.join(', ') || 'none'}`
+      + (notes.length ? ' · ⚠ ' + notes.join('; ') : ''), notes.length > 0);
+    refreshLinks();
+    loadPlayer();
+  } catch (e) {
+    if (e.message !== 'stopped') status('Error: ' + e.message, true);
+  } finally {
+    setBusy(false);
+  }
+}
+
+function refreshLinks() { $('open').href = shareUrl($('code').value); }
+
+function loadPlayer() {
+  $('player').src = shareUrl($('code').value);
+  $('player').classList.remove('hidden');
+}
+
+$('go').onclick = write;
+$('stop').onclick = () => {
+  worker?.terminate(); worker = null; loaded = null;
+  pending?.reject(new Error('stopped')); pending = null;
+  status('Stopped. (The model reloads from the cache on the next run.)');
+};
+$('variant').onchange = () => { if (!busy && loaded && loaded !== $('variant').value) { worker?.terminate(); worker = null; loaded = null; } };
+$('play').onclick = loadPlayer;
+$('code').oninput = refreshLinks;
+$('copy').onclick = async () => {
+  try { await navigator.clipboard.writeText($('code').value); status('Copied.'); } catch { $('code').select(); }
+};
+</script>
+</body>
+</html>
