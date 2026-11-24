@@ -1,0 +1,20 @@
+# big / regenerable — see HANDOFF.md "Where things live"
+.venv/
+node_modules/
+__pycache__/
+*.pyc
+.DS_Store
+data/
+tiny/data/
+tiny/*.safetensors
+adapters/
+renders/
+logs/
+deckc/tracks/
+deckc/mine/moments/
+deckc/site/
+samples/
+*.mp4
+*.mp3
+*.wav
+*.bin

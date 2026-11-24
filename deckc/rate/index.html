@@ -1,0 +1,813 @@
+<title>Разметка ИИ-партий</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Manrope:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* One column for a phone held in one hand: what plays, then the verdict buttons in thumb reach.
+   Same espresso palette as «Третья дека»; teal marks the AI part. Deliberately dark only. */
+:root {
+  --bg: #17110d;
+  --panel: #221913;
+  --line: #3a2c22;
+  --fg: #f3e7d6;
+  --muted: #b29d86;
+  --accent: #f0a63a;
+  --ink: #1b1209;
+  --cool: #63c7b2;
+  --good: #7fc66b;
+  --bad: #e46a4f;
+  --display: 'Oswald', 'Arial Narrow', Impact, sans-serif;
+  --body: 'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { background: var(--bg); color: var(--fg); }
+body { font-family: var(--body); font-size: 16px; line-height: 1.45; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.wrap { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 40px; max-width: 560px; margin: 0 auto; display: grid; gap: 18px; }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+h1 { font-family: var(--display); font-weight: 700; text-transform: uppercase; font-size: 30px; line-height: 1; margin: 0; letter-spacing: .01em; }
+h1 span { color: var(--cool); }
+.lede { margin: 6px 0 0; color: var(--muted); font-size: 15px; max-width: 46ch; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: grid; gap: 10px; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag { font-family: var(--mono); font-size: 12px; border: 1px solid var(--line); border-radius: 999px; padding: 3px 9px; color: var(--muted); }
+.tag.role { border-color: var(--cool); color: var(--cool); }
+.what { font-family: var(--display); font-size: 24px; line-height: 1.1; text-transform: uppercase; overflow-wrap: anywhere; }
+.bars { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; }
+.bars i { height: 8px; border-radius: 2px; background: var(--line); }
+.bars i.part { height: 14px; align-self: end; }
+.bars i.on { background: var(--muted); }
+.bars i.part.on { background: var(--cool); }
+.ctx { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 14px; color: var(--muted); }
+.ctx .btn { padding: 6px 10px; font-size: 14px; }
+.code { font-family: var(--mono); font-size: 12px; color: var(--muted); overflow-x: auto; white-space: nowrap; padding-bottom: 2px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn { border: 1px solid var(--line); background: transparent; border-radius: 10px; padding: 10px 14px; font-weight: 600; }
+.btn[aria-pressed="true"] { border-color: var(--cool); color: var(--cool); }
+.btn.big { background: var(--accent); color: var(--ink); border: 0; font-family: var(--display); text-transform: uppercase; font-size: 22px; letter-spacing: .03em; padding: 14px 26px; }
+.q { font-weight: 700; margin: 0; }
+.hint { color: var(--muted); font-size: 14px; margin: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 7px 12px; font-size: 14px; }
+.chip[aria-pressed="true"] { background: var(--bad); border-color: var(--bad); color: var(--ink); }
+.verdict { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.verdict button { border: 0; border-radius: 12px; padding: 16px 6px; font-family: var(--display); font-size: 20px; text-transform: uppercase; color: var(--ink); }
+.verdict .good { background: var(--good); }
+.verdict .meh { background: var(--muted); }
+.verdict .bad { background: var(--bad); }
+.verdict button:disabled { opacity: .4; cursor: default; }
+.verdict.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.verdict.two .meh, .verdict.two .bad { font-size: 16px; padding: 12px 6px; }
+[hidden] { display: none !important; }  /* .card and .row set display, which would beat the attribute */
+.mode { display: flex; flex-wrap: wrap; gap: 8px; }
+.vol { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 6px 12px; font-size: 14px; color: var(--muted); }
+.vol input { width: 100%; accent-color: var(--cool); height: 28px; }
+.wrap { overflow-x: clip; }
+#now { position: relative; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+#now.flying { transition: transform .25s ease-in, opacity .25s ease-in; }
+#now.settling { transition: transform .2s ease-out; }
+.stamp { position: absolute; top: 14px; padding: 4px 10px; border: 3px solid; border-radius: 8px; font-family: var(--display); font-size: 26px;
+  text-transform: uppercase; opacity: 0; pointer-events: none; transform: rotate(-12deg); z-index: 1; }
+.stamp.yes { left: 14px; color: var(--good); }
+.stamp.no { right: 14px; color: var(--bad); transform: rotate(12deg); }
+.swipecount { text-align: center; font-size: 13px; color: var(--muted); margin: 4px 0 0; }
+.swipebar { display: flex; justify-content: center; align-items: center; gap: 22px; }
+.round { width: 72px; height: 72px; border-radius: 50%; border: 2px solid var(--line); background: var(--panel); font-size: 30px; line-height: 1; }
+.round.yes { color: var(--good); border-color: var(--good); }
+.round.no { color: var(--bad); border-color: var(--bad); }
+.round.skipr { width: 52px; height: 52px; font-size: 22px; color: var(--muted); }
+.round:disabled { opacity: .4; }
+.btn.ab { min-width: 64px; font-family: var(--display); font-size: 18px; }
+.stats { font-family: var(--mono); font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: pre-line; }
+.skip { justify-self: start; border: 0; background: none; color: var(--muted); text-decoration: underline; padding: 4px 0; }
+@media (prefers-reduced-motion: no-preference) { .bars i { transition: background .1s; } }
+/* Swipes are a clean card, Tinder-style (the owner): what plays and its kind, swipe right or left. The
+   gear brings the rest back (modes, volumes, context, code). */
+.gear { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 10px); right: max(12px, env(safe-area-inset-right, 0px)); z-index: 5;
+  width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel); color: var(--muted); font-size: 18px; }
+body.clean header, body.clean #code, body.clean #now .row, body.clean #stats { display: none; }
+body.clean:not(.settings) .mode, body.clean:not(.settings) #now .vol, body.clean:not(.settings) #now .ctx { display: none; }
+body.clean .wrap { min-height: 100dvh; align-content: center; padding-block: 56px 28px; }
+body.clean #now { min-height: 52dvh; align-content: center; gap: 18px; padding: 22px; }
+body.clean .what { font-size: 32px; }
+body.clean .tag { font-size: 14px; }
+body.clean .tag.role { font-size: 16px; padding: 5px 12px; }
+body.clean .swipebar { gap: 34px; }
+body.clean .round { width: 84px; height: 84px; font-size: 34px; }
+#offline { justify-self: center; font-size: 14px; padding: 8px 12px; }
+.offmsg { text-align: center; font-size: 13px; color: var(--muted, inherit); opacity: .8; margin: 0; }
+body.clean .round.skipr { width: 52px; height: 52px; font-size: 22px; }
+</style>
+
+<button class="gear" id="gear" aria-label="Настройки" aria-pressed="false">⚙</button>
+<main class="wrap">
+  <header>
+    <h1>Разметка <span>ИИ-партий</span></h1>
+    <p class="lede">Нейросеть сочиняет партию, она играет 8 тактов поверх куска трека. Оцените не вкус, а уместность: в долю ли, в тон ли, подкачивает ли трек по энергии и стилю.</p>
+  </header>
+
+  <div class="mode" role="group" aria-label="Режим">
+    <button class="btn" id="m-swipe" aria-pressed="true">Свайпы</button>
+    <button class="btn" id="m-ab" aria-pressed="false">Сравнить две</button>
+    <button class="btn" id="m-one" aria-pressed="false">По одной</button>
+  </div>
+
+  <button class="btn big" id="start">Начать</button>
+  <button class="btn" id="offline">Скачать для офлайна</button>
+  <p class="offmsg" id="offmsg"></p>
+
+  <section class="card" id="now" aria-live="polite">
+    <div class="stamp yes" id="stamp-yes" aria-hidden="true">Годно</div>
+    <div class="stamp no" id="stamp-no" aria-hidden="true">Мимо</div>
+    <div class="tags" id="tags"><span class="tag">пример</span><span class="tag role">бас</span><span class="tag">техно</span><span class="tag">пик энергии</span></div>
+    <div class="what" id="what">Sterile Knot + ИИ-бас</div>
+    <div class="bars" id="bars" aria-hidden="true"></div>
+    <div class="code" id="code">note("[e2 ~ e2@2 ~ e3 ~ d2 ...]")</div>
+    <div class="row">
+      <button class="btn ab" id="ab-a" aria-pressed="false" hidden disabled>А</button>
+      <button class="btn ab" id="ab-b" aria-pressed="false" hidden disabled>Б</button>
+      <button class="btn" id="again" disabled>Ещё раз</button>
+      <button class="btn" id="solo" aria-pressed="false" disabled>Только партия</button>
+    </div>
+    <div class="vol">
+      <label for="vol-track">Трек</label><input type="range" id="vol-track" min="0" max="100" step="5" value="85">
+      <label for="vol-part">Партия</label><input type="range" id="vol-part" min="50" max="250" step="10" value="100">
+    </div>
+    <div class="ctx" role="group" aria-label="Сколько фраз играет партия">
+      Партия играет:
+      <button class="btn" data-len="1" aria-pressed="true">1 фразу</button>
+      <button class="btn" data-len="2" aria-pressed="false">2</button>
+      <button class="btn" data-len="4" aria-pressed="false">4</button>
+    </div>
+    <div class="ctx" role="group" aria-label="Что слышно вокруг партии">
+      Трек вокруг:
+      <button class="btn" data-ctx="none" aria-pressed="false">без</button>
+      <button class="btn" data-ctx="before" aria-pressed="false">фраза до</button>
+      <button class="btn" data-ctx="both" aria-pressed="true">до и после</button>
+    </div>
+  </section>
+
+  <!-- Swipes: right fits, left doesn't; one part per card. Cards come in twins for the same moment
+       (pairs for tiny/dpo.py where the verdicts differ), and now and then a card returns to measure
+       how consistent the ratings are. -->
+  <section class="swipebar" id="swipe">
+    <button class="round no" id="s-bad" aria-label="Мимо" disabled>✕</button>
+    <button class="round skipr" id="s-skip" aria-label="Пропустить" disabled>↷</button>
+    <button class="round yes" id="s-good" aria-label="Годно" disabled>♥</button>
+  </section>
+  <p class="swipecount" id="swipecount"></p>
+
+  <section class="card" id="single">
+    <p class="q">Что не так? <span class="hint">необязательно, можно несколько</span></p>
+    <div class="chips" id="reasons"></div>
+    <p class="q">Итог</p>
+    <div class="verdict">
+      <button class="good" id="v-good" disabled>Годно</button>
+      <button class="meh" id="v-meh" disabled>Так себе</button>
+      <button class="bad" id="v-bad" disabled>Мимо</button>
+    </div>
+    <button class="skip" id="skip" disabled>Пропустить</button>
+  </section>
+
+  <!-- Two parts for the same moment of the same track, A then B: one tap says which pumps the track
+       up better. Pairs train the model directly (tiny/dpo.py). -->
+  <section class="card" id="pair" hidden>
+    <p class="q">Какая лучше подкачивает трек? <span class="hint">сначала играет А, за ней Б</span></p>
+    <div class="verdict two">
+      <button class="good" id="p-a" disabled>А лучше</button>
+      <button class="good" id="p-b" disabled>Б лучше</button>
+      <button class="meh" id="p-both" disabled>Обе годно</button>
+      <button class="bad" id="p-none" disabled>Обе мимо</button>
+    </div>
+    <button class="skip" id="p-skip" disabled>Пропустить</button>
+  </section>
+
+  <p class="stats" id="stats">Оценок пока нет.</p>
+</main>
+
+<script src="deckc.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const use = (name) => (window.claude?.use ? window.claude.use(name) : Promise.resolve(null));
+
+// Offline (the owner swipes on a phone that loses the network): "Скачать для офлайна" puts the batch's
+// tracks and every sample in this browser's Cache Storage, and fetch serves them from there (json is
+// asked from the network first, so a new batch still arrives). The page itself comes from claude.ai, so
+// it has to be opened online and the tab kept open. Every swipe waits in localStorage and is sent from
+// there, so one made without a connection goes out when it returns.
+const OFFLINE = 'rate-offline-v1', PENDING = 'rate-pending';
+const netFetch = window.fetch.bind(window);
+const cached = async (url) => { try { return await (await caches.open(OFFLINE)).match(url); } catch { return undefined; } };
+window.fetch = async (input, init) => {
+  const url = typeof input === 'string' ? input : input.url;
+  if (/\.json(\?|$)/.test(url)) {
+    try { const r = await netFetch(input, init); if (r.ok) return r; } catch (e) { const hit = await cached(url); if (hit) return hit; throw e; }
+    return (await cached(url)) ?? netFetch(input, init);
+  }
+  return (await cached(url)) ?? netFetch(input, init);
+};
+async function downloadOffline() {
+  const msg = $('offmsg');
+  if (!window.caches) { msg.textContent = 'Этот браузер не даёт хранить файлы.'; return; }
+  $('offline').disabled = true;
+  try {
+    navigator.storage?.persist?.().catch(() => {});
+    const files = ['data.json', 'mine/mine.json', 'mine/batch.json', ...new Set(batch.map((it) => it.audio?.file ?? it.url))];
+    if (!prerendered()) {  // live parts need the instruments too
+      const kit = await netFetch('kit.json').then((r) => r.json());
+      files.push('kit.json');
+      for (const v of Object.values(kit)) for (const f of (Array.isArray(v) ? v : Object.values(v).flat())) files.push('samples/' + f);
+    }
+    const cache = await caches.open(OFFLINE);
+    let done = 0, failed = 0;
+    const next = async () => {
+      for (let f; (f = files.shift()) !== undefined;) {
+        try { if (/\.json$/.test(f) || !(await cache.match(f))) { const r = await netFetch(f); if (!r.ok) throw new Error(r.status); await cache.put(f, r); } }
+        catch { failed++; }
+        msg.textContent = `Скачано ${++done} из ${done + files.length}…`;
+      }
+    };
+    await Promise.all([next(), next(), next(), next()]);
+    msg.textContent = failed ? `Не скачалось ${failed} файлов, нажми ещё раз.` : 'Готово: можно свайпать без сети. Вкладку не закрывай.';
+  } catch (e) { msg.textContent = 'Не скачалось: ' + (e.message || e); }
+  $('offline').disabled = false;
+}
+const pending = () => { try { return JSON.parse(localStorage.getItem(PENDING) || '[]'); } catch { return []; } };
+const keep = (list) => { try { localStorage.setItem(PENDING, JSON.stringify(list)); } catch {} };
+let flushing = false;
+async function flush() {
+  if (flushing || !db || navigator.onLine === false) return;
+  flushing = true;
+  try {
+    for (let list = pending(); list.length; list = pending()) {
+      const { name, row } = list[0];
+      await db.collection(name).add(row);
+      keep(pending().filter((p) => p.row.at !== row.at));
+    }
+  } catch {} finally { flushing = false; renderCount(); }
+}
+addEventListener('online', flush);
+setInterval(flush, 30000);
+const KEYS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const ROLE = { bass: 'бас', lead: 'мелодия', solo: 'соло', drums: 'ритм', chords: 'аккорды', arp: 'арпеджио', stab: 'стабы',
+  pad: 'пэд', gate: 'транс-гейт', drone: 'дрон', vox: 'вокальные чопы', seq: 'секвенция', acid: 'эсид', fill: 'сбивки' };
+const DRUMLIKE = new Set(['drums', 'fill']);
+const STYLE = { house: 'хаус', progressive: 'прогрессив', techno: 'техно' };
+const LEVELS = [['lo', 'тихое место', 0, 0.4], ['mid', 'середина', 0.4, 0.75], ['hi', 'пик энергии', 0.75, 1.01]];
+const REASONS = [['offbeat', 'не в долю'], ['offkey', 'не в тон'], ['dense', 'слишком густо'], ['sparse', 'слишком пусто'],
+  ['boring', 'скучно'], ['style', 'не тот стиль'], ['sound', 'плохой звук']];
+const SECTION = { 'подъём': 'build', 'припев': 'drop', 'спад': 'break', 'бридж': 'break', 'интро': 'groove', 'куплет': 'groove', 'аутро': 'groove' };
+const pick = (xs) => xs[Math.floor(Math.random() * xs.length)];
+
+let data, model, mixer, db = null, current = null, upcoming = null, soloOnly = false;
+let view = 'swipe';  // 'swipe': one part per card, right or left; 'ab': two parts for one moment, pick the better; 'one': rate one part
+try { view = localStorage.getItem('rate-view') || 'swipe'; } catch {}
+let cards = [], card = null, history = [];
+// how loud the track and the AI part are, kept per device (a phone speaker needs the part louder)
+let trackVol = 0.85, partVol = 1;
+try { trackVol = +(localStorage.getItem('rate-track') ?? 0.85); partVol = +(localStorage.getItem('rate-part') ?? 1); } catch {}
+const applyVolume = () => mixer?.setTracksGain(soloOnly ? 0 : trackVol);
+// the track around the part: its phrase before (the part's entrance is heard against it) and after
+// (how it leaves); 'none' plays only the part's phrase
+let around = 'both', partPhrases = 1, layout = { lead: 0, part: 8, total: 8 };
+try { around = localStorage.getItem('rate-around') || 'both'; partPhrases = +(localStorage.getItem('rate-phrases') || 1); } catch {}  // swipe view: cards still to show, the one showing, the ones swiped
+let ratings = [], pairs = [];  // what the store holds, or what was rated on this page when there is none
+let own = [];   // the owner's rekordbox tracks (mine/mine.json from deckc/mine.py), when published with the page
+
+// A track and the phrase lines a part may start on: the owner's own tracks when the page has them
+// (they know them well) with rekordbox's phrases and their kinds; otherwise a demo set's track.
+function pickTrack() {
+  if (own.length) {
+    const track = pick(own);
+    return { track, set: 'mine', family: track.family, url: 'mine/tracks/' + track.file,
+      starts: track.phrases.filter((p) => p.bar >= 0 && p.bar + 8 < track.energy.length) };
+  }
+  const set = pick(data.sets), id = pick([set.a, set.b]), track = data.tracks.find((t) => t.id === id);  // pick once, not per track
+  const phrase = data.library.find((t) => t.id === track.id)?.phrase ?? 0, starts = [];
+  for (let b = phrase + 8; b + 8 < track.energy.length - 4; b += 8) starts.push({ bar: b, kind: '' });
+  return { track, set: set.id, family: set.family, url: 'tracks/' + track.file, starts };
+}
+
+// Parts composed ahead on the Mac (deckc/batch.mjs -> mine/batch.json): the phone only plays them,
+// and loads the model itself only when the batch runs out. Moments already rated are skipped.
+let batch = [], batchAt = 0, batchById = new Map();
+let me = null;  // this rater's id (the user capability): ratings from several people stay apart
+const seen = new Set();
+function fromBatch() {
+  while (batchAt < batch.length) {
+    const it = batch[batchAt++];
+    if (seen.has(it.pairId)) continue;
+    seen.add(it.pairId);
+    return view === 'one' ? { ...it, ...it.a, ab: false } : { ...it, ab: true };
+  }
+  return null;
+}
+async function ensureModel() { model ??= await DeckC.Tiny.load('tiny.json'); return model; }
+
+// A rating item: a track at a phrase of the chosen energy, and a part composed for it.
+async function makeItem() {
+  const ready = fromBatch();
+  if (ready) return ready;
+  await ensureModel();
+  const { track, set, family, url, starts } = pickTrack();
+  const role = pick(['bass', 'lead', 'solo', 'drums', 'chords']);
+  const mean = (b) => track.energy.slice(b, b + 8).reduce((a, x) => a + x, 0) / 8;
+  const [level, levelName, lo, hi] = pick(LEVELS);
+  const fits = starts.filter((p) => mean(p.bar) >= lo && mean(p.bar) < hi);
+  const start = pick(fits.length ? fits : starts), fromBar = start.bar, energy = mean(fromBar);
+  // the section: rekordbox's phrase kind on the owner's tracks, else the energy around the phrase (as the demo)
+  const next = mean(fromBar + 8), prev = mean(Math.max(0, fromBar - 8));
+  const section = SECTION[start.kind] ?? (next - energy > 0.25 ? 'build' : energy < 0.35 ? 'break' : energy - prev > 0.25 ? 'drop' : 'groove');
+  const [tonic, mode] = track.key.split(' ');
+  const hear = track.hear ? DeckC.heardOver(track.hear.slice(fromBar, fromBar + 8)) : undefined;  // what the track plays (deckc/hear.py)
+  const ask = { role, family, keyPc: KEYS.indexOf(tonic), minor: mode === 'minor', energy, section, hear };
+  const item = { set, family, section, track: track.id, url, title: track.artist && set === 'mine' ? `${track.artist} — ${track.title}` : track.title,
+    key: track.key, role, fromBar, phrase: start.kind, hear, pairId: Math.random().toString(36).slice(2, 10), energy: +energy.toFixed(2), level, levelName: fits.length ? levelName : 'середина' };
+  if (view === 'one') return { ...item, ...(await DeckC.composePart(model, ask)) };
+  // one draft each, so the pair compares the model's own choices rather than the page's rules; the
+  // temperature varies per part, so pairs differ by more than a note and also say how bold to sample
+  const one = async () => { const temperature = pick([0.9, 1.1, 1.3]); return { ...(await DeckC.composePart(model, { ...ask, drafts: 1, temperature })), temperature }; };
+  const a = await one();
+  let b = await one();
+  if (b.mini === a.mini && b.fx.join() === a.fx.join()) b = await one();
+  return { ...item, ab: true, prompt: a.prompt, a, b };
+}
+
+function show(item, which) {
+  const tags = ['', ROLE[item.role], STYLE[item.family], item.phrase, item.levelName, item.key].filter((t, i) => !i || t);
+  $('tags').replaceChildren(...tags.slice(1).map((t, i) => { const s = document.createElement('span'); s.className = 'tag' + (i === 0 ? ' role' : ''); s.textContent = t; return s; }));
+  $('what').textContent = `${item.title} + ИИ: ${ROLE[item.role]}`;
+  $('code').textContent = (which ? item[which] : item.ab ? item.a : item).code;
+  const pairView = item.ab && view === 'ab';
+  $('ab-a').hidden = $('ab-b').hidden = $('pair').hidden = !pairView;
+  $('again').hidden = pairView;
+  $('single').hidden = view !== 'one';
+  $('swipe').hidden = view !== 'swipe';
+  for (const b of $('reasons').children) {
+    b.setAttribute('aria-pressed', 'false');
+    b.hidden = DRUMLIKE.has(item.role) && b.dataset.id === 'offkey';
+  }
+}
+
+// One part over the track's phrase for 8 bars; `which` is 'a' or 'b' for a pair, and A leads into B
+// once (item.autoB) so a pair needs no taps to hear both.
+let lastWhich = 'a', clips = [];
+const trackOf = (item) => (item.set === 'mine' ? own : data.tracks).find((t) => t.id === item.track);
+// Tracks are fetched before they are needed (3-8 MB each, and on a phone their download and decoding
+// were most of the wait after "Начать" and between cards): the first card's while the page waits for
+// the tap, the next card's (fetched and cut, see clipOf) while this one plays.
+const trackBytes = new Map();
+function fetchTrack(url) {
+  if (!trackBytes.has(url)) {
+    trackBytes.set(url, fetch(url).then((r) => { if (!r.ok) throw Error(`трек: ${r.status}`); return r.arrayBuffer(); })
+      .catch((e) => { trackBytes.delete(url); throw e; }));
+  }
+  return trackBytes.get(url);
+}
+// The card's stretch of its track, as a track object for the deck: the whole track decoded (~130 MB for
+// 6 minutes of 48 kHz stereo floats), the track's own sounds cut from it (engine.useTrackSounds), the
+// bars the card can play (8 before the moment, up to 32 of the part, 8 after) copied out (~35 MB) and
+// the whole buffer let go. One decode at a time and two cards' stretches kept: holding two whole tracks
+// and decoding a third made iOS reload the page.
+let decoding = Promise.resolve();
+async function clipOf(item) {
+  if (item.clip) return item.clip;
+  item.clipping ??= (decoding = decoding.catch(() => {}).then(async () => {
+    const track = trackOf(item), bytes = await fetchTrack(item.url);
+    trackBytes.delete(item.url);  // decoding takes the bytes over
+    let whole = await DeckC.loadBuffer(bytes);
+    track.buffer = whole; DeckC.useTrackSounds(track); track.buffer = undefined;  // the cuts, from the whole track
+    const bar = 240 / track.bpm, sr = whole.sampleRate;
+    const from = Math.max(0, item.fromBar - 8), to = Math.min(track.energy.length, item.fromBar + 40);
+    const t0 = Math.max(0, (track.bar0 ?? 0) + from * bar - 0.5), t1 = Math.min(whole.duration, (track.bar0 ?? 0) + to * bar + 2);
+    const a = Math.floor(t0 * sr), n = Math.max(1, Math.floor((t1 - t0) * sr));
+    const buffer = DeckC.audioContext().createBuffer(whole.numberOfChannels, n, sr);
+    for (let c = 0; c < whole.numberOfChannels; c++) buffer.copyToChannel(whole.getChannelData(c).subarray(a, a + n), c);
+    whole = null;
+    item.clip = { ...track, buffer, bar0: (track.bar0 ?? 0) - t0, cuts: track.cuts };
+    clips = [item, ...clips.filter((x) => x !== item)];
+    for (const x of clips.splice(2)) x.clip = undefined;
+  })).finally(() => { item.clipping = undefined; });
+  await item.clipping;
+  return item.clip;
+}
+// Prerendered cards (deckc/prerender.py): one small AAC file per card holds the track's stretch and both
+// parts, rendered on the Mac, so the phone neither synthesizes nor decodes whole tracks (it took long to
+// start and iOS reloaded the page). A plain Web Audio player: the stretch and the part started together
+// from the one decoded file, the sliders on two gains.
+const prerendered = () => batch.length > 0 && batch.every((it) => it.audio);
+class Player {
+  constructor() {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    this.ctx = new AC();
+    this.track = this.ctx.createGain(); this.part = this.ctx.createGain();
+    this.track.connect(this.ctx.destination); this.part.connect(this.ctx.destination);
+    this.srcs = []; this.running = false; this.t0 = 0; this.bar = 2; this.timer = null;
+  }
+  now() { return this.ctx.currentTime; }
+  barAt(t) { return (t - this.t0) / this.bar; }
+  setTracksGain(v) { this.track.gain.setTargetAtTime(v, this.ctx.currentTime, 0.03); }
+  setPartGain(v) { this.part.gain.setTargetAtTime(v, this.ctx.currentTime, 0.03); }
+  stop() {
+    for (const s of this.srcs) try { s.stop(); } catch {}
+    this.srcs = []; this.running = false; clearTimeout(this.timer);
+  }
+  // `stretchAt`/`partAt`: seconds into the buffer where the heard stretch and the part begin
+  play({ buffer, stretchAt, partAt, bar, lead, partBars, total }, onEnd) {
+    this.stop();
+    this.ctx.resume?.();
+    const ctx = this.ctx, t0 = ctx.currentTime + 0.08;
+    this.t0 = t0; this.bar = bar; this.running = true;
+    const tr = ctx.createBufferSource(); tr.buffer = buffer; tr.connect(this.track);
+    tr.start(t0, stretchAt, total * bar);
+    const pt = ctx.createBufferSource(), fade = ctx.createGain(); pt.buffer = buffer;
+    pt.connect(fade); fade.connect(this.part);
+    const end = t0 + (lead + partBars) * bar;  // the part's last note rings out for a moment, then fades
+    fade.gain.setValueAtTime(1, end); fade.gain.linearRampToValueAtTime(0, end + 1.2);
+    pt.start(t0 + lead * bar, partAt, partBars * bar + 1.3);
+    this.srcs = [tr, pt];
+    this.timer = setTimeout(() => { this.running = false; onEnd?.(); }, (t0 + total * bar - ctx.currentTime) * 1000);
+  }
+}
+// The card's file decoded once, kept for this card and the next (each ~2 minutes of audio).
+async function preOf(item) {
+  if (item.pre) return item.pre;
+  item.preing ??= (decoding = decoding.catch(() => {}).then(async () => {
+    const bytes = await fetchTrack(item.audio.file);
+    trackBytes.delete(item.audio.file);
+    const buffer = await new Promise((ok, err) => mixer.ctx.decodeAudioData(bytes, ok, err));  // the callback form for older Safari
+    // the click 0.25 s in says where the audio starts (decoders drop different amounts of the encoder's priming)
+    const sr = buffer.sampleRate, ch = buffer.getChannelData(0), look = Math.floor(0.45 * sr);
+    let click = 0;
+    for (let i = 0, top = 0; i < look; i++) { const v = Math.abs(ch[i]); if (v > top) { top = v; click = i; } }
+    item.pre = { buffer, at: click / sr };
+    clips = [item, ...clips.filter((x) => x !== item)];
+    for (const x of clips.splice(2)) { x.pre = undefined; x.clip = undefined; }
+  })).finally(() => { item.preing = undefined; });
+  await item.preing;
+  return item.pre;
+}
+async function playPre(item, which) {
+  const w = which ?? 'a', piece = which ? item[which] : item;
+  lastWhich = which ?? lastWhich;
+  mixer.stop();
+  const pre = await preOf(item), A = item.audio;
+  const lead = around === 'none' ? 0 : A.lead, phrases = Math.max(1, Math.min(partPhrases, A.phrases)), part = 8 * phrases;
+  const tail = around === 'both' ? Math.min(8, A.tail + 8 * (A.phrases - phrases)) : 0;
+  layout = { lead, part, total: lead + part + tail };
+  applyVolume();
+  mixer.setPartGain(partVol);
+  mixer.play({ buffer: pre.buffer, stretchAt: pre.at + A.stretch[0] + (A.lead - lead) * A.bar, partAt: pre.at + A[w][0], bar: A.bar,
+    lead, partBars: part, total: layout.total }, () => {
+    if (which === 'a' && item.autoB && current === item) { item.autoB = false; play(item, 'b'); }
+  });
+  $('code').textContent = piece.code;
+  for (const x of ['a', 'b']) $('ab-' + x).setAttribute('aria-pressed', String(which === x));
+  const dev = piece.dev?.[0]?.code;  // the developed phrase's code once it plays
+  if (phrases > 1 && dev) setTimeout(() => { if (current === item && mixer.running) $('code').textContent = dev; }, (lead + 8) * A.bar * 1000);
+}
+
+// the next card's audio: decoded once audio is on (after the tap), else only fetched
+const preload = (item) => (!mixer ? fetchTrack(item.audio?.file ?? item.url)
+  : item.audio && mixer instanceof Player ? preOf(item) : clipOf(item)).catch(() => {});
+
+async function play(item, which) {
+  if (item.audio && mixer instanceof Player) return playPre(item, which);
+  const piece = which ? item[which] : item;
+  lastWhich = which ?? lastWhich;
+  mixer.stop();
+  const track = await clipOf(item);
+  DeckC.useTrackSounds(track);  // `chop` and `trackhat` from this track (engine.mjs)
+  // fetch the part's instrument notes first (at most 1.5 s: the lead-in phrase covers the rest)
+  await Promise.race([Promise.all([piece.code, ...(piece.dev ?? []).map((d) => d.code)].map((c) => DeckC.prepare(c))), new Promise((r) => setTimeout(r, 1500))]);
+  // the part plays 1, 2 or 4 phrases (as far as the track goes), between the phrases around it: its
+  // developed phrases from the batch (deckc/batch.mjs `dev`) one after another, or else its loop again
+  const lead = around === 'none' ? 0 : Math.min(8, item.fromBar);
+  const part = 8 * Math.max(1, Math.min(partPhrases, Math.floor((track.energy.length - item.fromBar) / 8)));
+  const tail = around === 'both' && item.fromBar + part + 8 <= track.energy.length ? 8 : 0, end = lead + part + tail;
+  layout = { lead, part, total: end };
+  mixer.start(track.bpm);
+  mixer.decks[0].start(track, mixer, 0, item.fromBar - lead);
+  mixer.decks[0].fade(track.trim || 1, undefined, 0.01, track.trim || 1);
+  const codes = [piece.code, ...(piece.dev ?? []).map((d) => d.code)].slice(0, part / 8), develops = codes.length > 1;
+  const slot = mixer.slots[0];  // the part comes in on the phrase line after the lead-in
+  slot.pending = { id: 'ai', label: 'ai', code: piece.code, pattern: DeckC.compile(piece.code).pattern, bars: develops ? 8 : part };
+  slot.pendingAt = lead;
+  applyVolume();
+  $('code').textContent = piece.code;
+  for (const w of ['a', 'b']) $('ab-' + w).setAttribute('aria-pressed', String(which === w));
+  // as on the demo page: AI percussion eases in and rides the track's energy
+  // the part comes in over its first bar (a hard entry only on a drop, where the hit is the point)
+  const entry = (bar) => (item.section === 'drop' ? 1 : Math.min(1, 0.3 + 0.7 * Math.max(0, bar - lead)));
+  // piece.norm: the part brought to its role's loudness when the batch was made (deckc/loudness.py)
+  mixer.level = (layer, bar) => partVol * (piece.norm ?? 1) * entry(bar) * (DRUMLIKE.has(item.role) ? DeckC.drumLevel(bar - lead, track.energy[item.fromBar + Math.floor(bar - lead)] ?? 0.7) : 1);
+  mixer.onBar = (b) => {
+    const k = (b + 2 - lead) / 8;  // two bars before phrase k of the part: queue its developed phrase
+    if (develops && Number.isInteger(k) && k >= 1 && k < codes.length) {
+      mixer.queue(0, { id: 'ai', label: 'ai', code: codes[k] }, { at: 'phrase', bars: 8 });
+      setTimeout(() => { if (mixer.slots[0].pending === null) $('code').textContent = codes[k]; }, Math.max(0, mixer.timeOf(lead + 8 * k) - DeckC.audioContext().currentTime) * 1000);
+    }
+    if (b !== end) return;
+    mixer.decks[0].stop(mixer.timeOf(end));
+    if (which === 'a' && item.autoB) {
+      item.autoB = false;
+      const wait = Math.max(0, mixer.timeOf(end) - DeckC.audioContext().currentTime) * 1000;
+      setTimeout(() => current === item && play(item, 'b'), wait);
+    }
+  };
+}
+
+// One cell per bar heard; the part's 8 bars are the tall ones.
+function renderBars() {
+  const bars = $('bars'), { lead, part, total } = layout;
+  if (bars.children.length !== total) {
+    bars.style.gridTemplateColumns = `repeat(${total}, 1fr)`;
+    bars.replaceChildren(...Array.from({ length: total }, () => document.createElement('i')));
+  }
+  [...bars.children].forEach((el, i) => el.classList.toggle('part', i >= lead && i < lead + part));
+  const pos = mixer?.running ? mixer.barAt(mixer.now?.() ?? DeckC.audioContext().currentTime) : -1;
+  [...bars.children].forEach((el, i) => el.classList.toggle('on', pos >= i && pos < total));
+  requestAnimationFrame(renderBars);
+}
+
+function setBusy(busy, text) {
+  for (const id of ['v-good', 'v-meh', 'v-bad', 'skip', 'again', 'solo', 'ab-a', 'ab-b', 'p-a', 'p-b', 'p-both', 'p-none', 'p-skip', 's-good', 's-bad', 's-skip']) $(id).disabled = busy;
+  if (text) $('what').textContent = text;
+}
+
+async function next() {
+  const item = await (upcoming ?? makeItem());
+  upcoming = makeItem();  // the next one is composed (and its track loaded) while this one plays
+  upcoming.then(preload, () => {});
+  return item;
+}
+
+async function advance() {
+  if (view === 'swipe') return advanceSwipe();
+  setBusy(true, 'Нейросеть сочиняет…');
+  try {
+    current = await next();
+  } catch (e) {
+    upcoming = null;
+    setBusy(false, 'Не получилось: ' + e.message);
+    return;
+  }
+  show(current);
+  current.autoB = view === 'ab';
+  await play(current, current.ab ? 'a' : undefined);
+  setBusy(false);
+}
+
+// Swipe view: the twin parts of a moment as two cards in random order; one card in ten (once there
+// is history) is an earlier card again, not said, whose second verdict measures the rater's noise.
+// When someone else rates too, one card in ten is one they swiped (unannounced): how often two people
+// agree says how much of a verdict is the part and how much the listener.
+const crossed = new Set();
+function crossCard() {
+  const theirs = ratings.filter((r) => r.mode === 'swipe' && r.rater && me && r.rater !== me && !r.repeatOf && !r.crossOf
+    && !crossed.has(r.at) && batchById.has(r.pairId) && !ratings.some((x) => x.crossOf === r.at && x.rater === me));
+  if (!theirs.length) return null;
+  const r = pick(theirs); crossed.add(r.at);
+  return { item: { ...batchById.get(r.pairId), ab: true }, which: r.slot, crossOf: r.at };
+}
+
+async function advanceSwipe() {
+  setBusy(true, 'Нейросеть сочиняет…');
+  const old = history.slice(0, -4).filter((h) => !h.repeated && !h.repeatOf && !h.crossOf);
+  const cross = Math.random() < 0.1 ? crossCard() : null;
+  if (cross) card = cross;
+  else if (old.length && Math.random() < 0.1) {
+    const h = pick(old); h.repeated = true;
+    card = { item: h.item, which: h.which, repeatOf: h.at };
+  } else {
+    if (!cards.length) {
+      let item;
+      try { item = await next(); } catch (e) { upcoming = null; setBusy(false, 'Не получилось: ' + e.message); return; }
+      cards = Math.random() < 0.5 ? [{ item, which: 'a' }, { item, which: 'b' }] : [{ item, which: 'b' }, { item, which: 'a' }];
+    }
+    card = cards.shift();
+  }
+  current = card.item;
+  resetCard();
+  show(card.item, card.which);
+  await play(card.item, card.which);
+  setBusy(false);
+}
+
+async function swipe(verdict) {
+  if (view !== 'swipe' || !card || $('s-good').disabled) return;
+  const c = card; card = null;
+  if (verdict !== 'skip') {
+    const at = Date.now();
+    history.push({ ...c, at, verdict });
+    await save('ratings', ratings, { verdict, mode: 'swipe', pairId: c.item.pairId, slot: c.which, repeatOf: c.repeatOf ?? null, crossOf: c.crossOf ?? null,
+      ...about(c.item), at, ...partRow(c.item[c.which]) });
+  }
+  advanceSwipe();
+}
+
+// What every saved row carries about the moment and the model.
+const about = (item) => ({ at: Date.now(), rater: me, model: item.model ?? `tiny ${model.cfg.dim}d step ${model.cfg.step} loss ${model.cfg.valid_loss}`, batch: !!item.model, pairId: item.pairId ?? null,
+  role: item.role, base: item.base ?? item.role, family: item.family, set: item.set, track: item.track, key: item.key, fromBar: item.fromBar, phrase: item.phrase,
+  section: item.section ?? null, hear: item.hear ?? null, heard: { around, phrases: partPhrases, developed: partPhrases > 1 && !!(item.a ?? item).dev?.length }, energy: item.energy, level: item.level, prompt: item.prompt });
+const partRow = (p) => ({ draft: p.draft, mini: p.mini, fx: p.fx ?? [], voice: p.voice ?? null, layer: p.layer ?? null, candy: p.candy ?? [], form: p.form ?? null, code: p.code, score: +p.score.toFixed(3), temperature: p.temperature ?? null });
+
+async function save(name, rows, row) {
+  if (!db) { rows.push(row); renderStats(); return; }
+  keep([...pending(), { name, row }]);
+  renderCount();
+  flush();
+}
+
+async function rate(verdict) {
+  if (!current || current.ab) return;
+  const reasons = [...$('reasons').children].filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.dataset.id);
+  if (verdict !== 'skip') await save('ratings', ratings, { verdict, reasons, ...about(current), ...partRow(current) });
+  advance();
+}
+
+// winner: 'a', 'b', 'both' (both fit) or 'none' (neither does)
+async function choose(winner) {
+  if (!current?.ab) return;
+  if (winner !== 'skip') await save('pairs', pairs, { winner, ...about(current), a: partRow(current.a), b: partRow(current.b) });
+  advance();
+}
+
+// toward the taste model (tiny/taste.py): about 1000 swipes for one that hears the notes
+const GOAL = 1000;
+function renderCount() {
+  const n = ratings.filter((r) => r.verdict === 'good' || r.verdict === 'bad').length;
+  const wait = pending().length;
+  $('swipecount').textContent = `оценок: ${n + wait} / ${GOAL}` + (wait ? ` · ждут сети: ${wait}` : '');
+}
+function renderStats() {
+  renderCount();
+  const n = (rows, k, v) => rows.filter((r) => r[k] === v).length, out = [];
+  const swiped = ratings.filter((r) => r.mode === 'swipe');
+  if (swiped.length) {
+    const byAt = new Map(swiped.map((r) => [r.at, r])), again = swiped.filter((r) => r.repeatOf && byAt.has(r.repeatOf));
+    const same = again.filter((r) => byAt.get(r.repeatOf).verdict === r.verdict).length;
+    const mine = swiped.filter((r) => !me || !r.rater || r.rater === me).length;
+    out.push(`Свайпов: ${swiped.length}${mine < swiped.length ? ` (твоих ${mine})` : ''} · годно ${n(swiped, 'verdict', 'good')} · мимо ${n(swiped, 'verdict', 'bad')}` +
+      (again.length ? ` · повторов ${again.length}, совпало с собой ${Math.round(100 * same / again.length)}%` : ''));
+    const cross = swiped.filter((r) => r.crossOf && byAt.has(r.crossOf));
+    if (cross.length) out.push(`Чужих карточек: ${cross.length}, совпало между людьми ${Math.round(100 * cross.filter((r) => byAt.get(r.crossOf).verdict === r.verdict).length / cross.length)}%`);
+  }
+  if (pairs.length) out.push(`Пар: ${pairs.length} · выбрана одна ${n(pairs, 'winner', 'a') + n(pairs, 'winner', 'b')} · обе годно ${n(pairs, 'winner', 'both')} · обе мимо ${n(pairs, 'winner', 'none')}`);
+  const singles = ratings.filter((r) => r.mode !== 'swipe');
+  if (singles.length) out.push(`По одной: ${singles.length} · годно ${n(singles, 'verdict', 'good')} · так себе ${n(singles, 'verdict', 'meh')} · мимо ${n(singles, 'verdict', 'bad')}`);
+  $('stats').textContent = out.length ? out.join('\n') + (db ? '' : '\nсохраняются только на этой странице') : 'Оценок пока нет.';
+}
+
+function setView(v) {
+  const was = view;
+  view = v;
+  try { localStorage.setItem('rate-view', v); } catch {}
+  for (const m of ['swipe', 'ab', 'one']) $('m-' + m).setAttribute('aria-pressed', String(v === m));
+  $('single').hidden = v !== 'one'; $('pair').hidden = v !== 'ab'; $('swipe').hidden = v !== 'swipe';
+  document.body.classList.toggle('clean', v === 'swipe');
+  if (mixer && current && was !== v) {  // the next item in the new view (one-part items can't be swiped as twins)
+    if ((was === 'one') !== (v === 'one')) upcoming = null;
+    cards = []; card = null; resetCard(); advance();
+  }
+}
+
+// Dragging the card: right past a threshold says it fits, left says it doesn't; short drags spring back.
+const nowCard = $('now');
+let drag = null;
+function resetCard() {
+  nowCard.classList.remove('flying', 'settling');
+  nowCard.style.transform = ''; nowCard.style.opacity = '';
+  $('stamp-yes').style.opacity = $('stamp-no').style.opacity = 0;
+}
+function fling(verdict) {
+  nowCard.classList.add('flying');
+  nowCard.style.transform = `translateX(${verdict === 'good' ? 140 : -140}%) rotate(${verdict === 'good' ? 18 : -18}deg)`;
+  nowCard.style.opacity = 0;
+  setTimeout(() => swipe(verdict), 230);
+}
+nowCard.addEventListener('pointerdown', (e) => {
+  if (view !== 'swipe' || !card || $('s-good').disabled || e.target.closest('button, input, label, .vol')) return;  // sliders and buttons stay usable
+  drag = { x: e.clientX, y: e.clientY, dx: 0 };
+  nowCard.classList.remove('settling');
+  nowCard.setPointerCapture(e.pointerId);
+});
+nowCard.addEventListener('pointermove', (e) => {
+  if (!drag) return;
+  drag.dx = e.clientX - drag.x;
+  nowCard.style.transform = `translateX(${drag.dx}px) rotate(${drag.dx / 18}deg)`;
+  $('stamp-yes').style.opacity = Math.max(0, Math.min(1, drag.dx / 90));
+  $('stamp-no').style.opacity = Math.max(0, Math.min(1, -drag.dx / 90));
+});
+const endDrag = () => {
+  if (!drag) return;
+  const { dx } = drag; drag = null;
+  if (Math.abs(dx) > 90) return fling(dx > 0 ? 'good' : 'bad');
+  nowCard.classList.add('settling'); nowCard.style.transform = '';
+  $('stamp-yes').style.opacity = $('stamp-no').style.opacity = 0;
+};
+nowCard.addEventListener('pointerup', endDrag);
+nowCard.addEventListener('pointercancel', endDrag);
+document.addEventListener('keydown', (e) => {
+  if (view !== 'swipe' || !card || $('s-good').disabled) return;
+  if (e.key === 'ArrowRight') fling('good');
+  else if (e.key === 'ArrowLeft') fling('bad');
+  else if (e.key === 'ArrowDown') $('s-skip').click();
+});
+
+for (const [id, label] of REASONS) {
+  const b = document.createElement('button'); b.className = 'chip'; b.dataset.id = id; b.textContent = label; b.setAttribute('aria-pressed', 'false');
+  b.onclick = () => b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true'));
+  $('reasons').append(b);
+}
+$('v-good').onclick = () => rate('good');
+$('v-meh').onclick = () => rate('meh');
+$('v-bad').onclick = () => rate('bad');
+$('skip').onclick = () => rate('skip');
+$('again').onclick = () => (view === 'swipe' ? card && play(card.item, card.which) : current && play(current));
+for (const w of ['a', 'b']) $('ab-' + w).onclick = () => current?.ab && play(current, w);
+for (const w of ['a', 'b', 'both', 'none', 'skip']) $('p-' + w).onclick = () => choose(w);
+$('vol-track').value = Math.round(trackVol * 100);
+$('vol-part').value = Math.round(partVol * 100);
+$('vol-track').oninput = (e) => { trackVol = e.target.value / 100; applyVolume(); try { localStorage.setItem('rate-track', trackVol); } catch {} };
+$('vol-part').oninput = (e) => { partVol = e.target.value / 100; mixer?.setPartGain?.(partVol); try { localStorage.setItem('rate-part', partVol); } catch {} };  // live: mixer.level reads it per note
+const lenButtons = [...document.querySelectorAll('[data-len]')];
+const showLen = () => lenButtons.forEach((b) => b.setAttribute('aria-pressed', String(+b.dataset.len === partPhrases)));
+showLen();
+for (const b of lenButtons) b.onclick = () => {
+  partPhrases = +b.dataset.len; showLen();
+  try { localStorage.setItem('rate-phrases', partPhrases); } catch {}
+  if (view === 'swipe') card && play(card.item, card.which);
+  else if (current) play(current, current.ab ? lastWhich : undefined);
+};
+const ctxButtons = [...document.querySelectorAll('[data-ctx]')];
+const showAround = () => ctxButtons.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.ctx === around)));
+showAround();
+for (const b of ctxButtons) b.onclick = () => {
+  around = b.dataset.ctx; showAround();
+  try { localStorage.setItem('rate-around', around); } catch {}
+  // hear the same part with the new surroundings
+  if (view === 'swipe') card && play(card.item, card.which);
+  else if (current) play(current, current.ab ? lastWhich : undefined);
+};
+$('m-swipe').onclick = () => setView('swipe');
+$('m-ab').onclick = () => setView('ab');
+$('gear').onclick = () => {
+  const on = !document.body.classList.contains('settings');
+  document.body.classList.toggle('settings', on); $('gear').setAttribute('aria-pressed', String(on));
+};
+$('s-good').onclick = () => fling('good');
+$('s-bad').onclick = () => fling('bad');
+$('s-skip').onclick = () => swipe('skip');
+$('m-one').onclick = () => setView('one');
+setView(view);
+$('solo').onclick = () => {
+  soloOnly = !soloOnly; $('solo').setAttribute('aria-pressed', String(soloOnly));
+  applyVolume();
+};
+$('start').onclick = async () => {
+  $('start').disabled = true; $('start').textContent = 'Загружаю…';
+  try {
+    if (prerendered()) mixer = new Player();  // made in the tap, as iOS wants for audio
+    else {
+      await DeckC.init('kit.json', 'samples/');
+      if (!batch.length) await ensureModel();
+      mixer = new DeckC.Mixer(1);
+    }
+    $('start').hidden = true;
+    renderBars();
+    advance();
+  } catch (e) { $('start').disabled = false; $('start').textContent = 'Начать'; $('stats').textContent = 'Не загрузилось: ' + e.message; }
+};
+
+(async () => {
+  data = await fetch('data.json').then((r) => r.json());
+  own = await fetch('mine/mine.json').then((r) => (r.ok ? r.json() : { tracks: [] })).then((m) => m.tracks, () => []);
+  own = own.filter((t) => t.phrases.some((p) => p.bar >= 0 && p.bar + 8 < t.energy.length));
+  const b = await fetch('mine/batch.json').then((r) => (r.ok ? r.json() : null), () => null);
+  if (b?.items) {  // a fresh order each visit, keeping each track's four moments together
+    const groups = [];
+    for (let i = 0; i < b.items.length; i += 4) groups.push(b.items.slice(i, i + 4));
+    for (let i = groups.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [groups[i], groups[j]] = [groups[j], groups[i]]; }
+    batch = groups.flat();
+    if (batch.some((it) => it.audio)) batch = batch.filter((it) => it.audio);  // a prerendered batch: only what the phone can just play
+    batchById = new Map(batch.map((it) => [it.pairId, it]));
+  }
+  pending().forEach((p) => p.row.pairId && seen.add(p.row.pairId));
+  $('offline').onclick = downloadOffline;
+  db = await use('db');
+  const user = await use('user');
+  me = (await user?.id().catch(() => null)) ?? null;
+  if (db) {
+    db.collection('ratings').onSnapshot((snap) => { ratings = snap.docs.map((d) => d.data()); ratings.forEach((r) => !r.repeatOf && r.pairId && seen.add(r.pairId)); renderStats(); }, () => {});
+    db.collection('pairs').onSnapshot((snap) => { pairs = snap.docs.map((d) => d.data()); pairs.forEach((r) => r.pairId && seen.add(r.pairId)); renderStats(); }, () => {});
+  } else renderStats();
+  flush();
+  // the first card picked (once the ratings say what was already swiped) and its track fetched while
+  // the page waits for "Начать"
+  if (batch.length) setTimeout(() => { if (!upcoming && !mixer) { upcoming = makeItem(); upcoming.then(preload, () => {}); } }, db ? 2500 : 0);
+})();
+</script>

@@ -1,0 +1,28 @@
+{
+  "name": "js",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "postinstall": "node fix-kabelsalat.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@strudel/core": "^1.2.6",
+    "@strudel/mini": "^1.2.6",
+    "@strudel/soundfonts": "^1.2.6",
+    "node-web-audio-api": "^2.2.0",
+    "superdough": "1.2.6"
+  },
+  "overrides": {
+    "superdough": "$superdough",
+    "@strudel/core": "$@strudel/core"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.2"
+  }
+}

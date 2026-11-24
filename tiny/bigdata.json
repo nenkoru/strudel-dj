@@ -1,0 +1,1 @@
+{"layers": 8, "dim": 320, "heads": 8, "ctx": 448, "vocab": "\n #*,-0123456789<>@[]abcdefghijklmnoprstuvwxy|~", "valid_loss": 0.2585, "step": 2400, "hear": true, "from": "bighear"}

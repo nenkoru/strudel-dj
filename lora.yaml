@@ -1,0 +1,20 @@
+# mlx_lm.lora config shared by all base models; pass --model and --adapter-path on the command line.
+train: true
+data: data/mlx
+fine_tune_type: lora
+mask_prompt: true          # loss on the loop code only
+batch_size: 4
+iters: 1200                # ≈ 2 epochs of 2348 examples
+learning_rate: 1.0e-4
+max_seq_length: 1400       # p99 of the examples is 1135 tokens
+num_layers: 16
+steps_per_report: 25
+steps_per_eval: 200
+val_batches: 25
+save_every: 400
+grad_checkpoint: true
+seed: 0
+lora_parameters:
+  rank: 16
+  scale: 20.0
+  dropout: 0.0

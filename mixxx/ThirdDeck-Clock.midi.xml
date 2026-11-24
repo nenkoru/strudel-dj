@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<MixxxMIDIPreset schemaVersion="1" mixxxVersion="2.4">
+    <info>
+        <name>Third Deck clock</name>
+        <author>strudel-lm</author>
+        <description>Not a controller: sends each deck's position, tempo and level as SysEx to the Third Deck page (map it to an IAC bus), so the page plays its Strudel decks in time with Mixxx.</description>
+    </info>
+    <controller id="ThirdDeckClock">
+        <scriptfiles>
+            <file functionprefix="ThirdDeckClock" filename="ThirdDeck-Clock-script.js"/>
+        </scriptfiles>
+        <controls/>
+        <outputs/>
+    </controller>
+</MixxxMIDIPreset>

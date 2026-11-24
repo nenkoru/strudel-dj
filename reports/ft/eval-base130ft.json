@@ -1,0 +1,16 @@
+{
+ "name": "base130ft",
+ "step": 1799,
+ "loss": {
+  "ev-genre-pieces": 1.1172,
+  "ev-genre-lines": 1.7849,
+  "baseB": 0.9917
+ },
+ "samples": {
+  "n": 48,
+  "ended": 48,
+  "balanced": 48,
+  "parts": 3.38,
+  "inkey": 0.929
+ }
+}

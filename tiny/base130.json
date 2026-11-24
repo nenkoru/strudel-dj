@@ -1,0 +1,1 @@
+{"layers": 16, "dim": 768, "heads": 12, "ctx": 2048, "arch": "v2", "tokenizer": "tok4k", "vocab_size": 4096, "valid_loss": 0.6897, "step": 21500}
