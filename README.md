@@ -14,6 +14,9 @@ explains the goal, the models, the results so far and what to try next.
 (base130, FT3, FT4; CC BY-NC-SA 4.0), with a standalone `modeling.py` that needs only torch, safetensors
 and tokenizers.
 
+**Data:** [nenkoru/strudel-dj-data](https://huggingface.co/datasets/nenkoru/strudel-dj-data), the converted
+training text with per-source licences (Jamendo and Freesound items credited one by one).
+
 **Try it:** [the Strudel DJ Space](https://huggingface.co/spaces/nenkoru/strudel-dj). The model runs in your
 browser (int8, about 130 MB downloaded once) and strudel.cc plays what it writes.
 
@@ -58,7 +61,8 @@ member that is not part of this repo; drop it if `uv sync` complains.
 
 ## Not included
 
-- **Data and corpora** (tens of GB; each source has its own licence, some non-commercial).
+- **Data and corpora** in git. The converted training text is on [Hugging Face](https://huggingface.co/datasets/nenkoru/strudel-dj-data),
+  except GigaMIDI (gated) and Jamendo tracks under NoDerivatives licences; raw downloads and packed token files are not published.
 - **Model weights** in git: base130, FT3 and FT4 are on [Hugging Face](https://huggingface.co/nenkoru/strudel-dj-129m); FT1, FT2 are not published.
 - **Listening data and the owner's tracks:** swipe ratings, the rekordbox export, prerendered cards, and
   the taste model's weights (its features name tracks). Tracks used in tests are anonymised as Track A–G.
