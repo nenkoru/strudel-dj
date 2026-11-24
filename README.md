@@ -10,6 +10,10 @@ tokens per 4 bars, so the model can be small enough to run near the music.
 **Work report:** [Can a 129M music model write guest parts a DJ would keep?](https://blog.nenkoru.com/posts/strudel-guest-decks/)
 explains the goal, the models, the results so far and what to try next.
 
+**Weights:** [huggingface.co/nenkoru/strudel-dj-129m](https://huggingface.co/nenkoru/strudel-dj-129m)
+(base130, FT3, FT4; CC BY-NC-SA 4.0), with a standalone `modeling.py` that needs only torch, safetensors
+and tokenizers.
+
 ## Status (2026-11-24)
 
 - **Model.** `base130`: a 129M decoder (16 × 768, context 2048, BPE with 4096 tokens), pretrained on MIDI
@@ -51,7 +55,7 @@ member that is not part of this repo; drop it if `uv sync` complains.
 ## Not included
 
 - **Data and corpora** (tens of GB; each source has its own licence, some non-commercial).
-- **Model weights** (the FT1–FT4 checkpoints are about 0.5 GB each).
+- **Model weights** in git: base130, FT3 and FT4 are on [Hugging Face](https://huggingface.co/nenkoru/strudel-dj-129m); FT1, FT2 are not published.
 - **Listening data and the owner's tracks:** swipe ratings, the rekordbox export, prerendered cards, and
   the taste model's weights (its features name tracks). Tracks used in tests are anonymised as Track A–G.
 
@@ -59,6 +63,7 @@ member that is not part of this repo; drop it if `uv sync` complains.
 
 - This repository: **AGPL-3.0-or-later** ([LICENSE](LICENSE)), matching Strudel and superdough, which it
   builds on.
+- The weights on Hugging Face: **CC BY-NC-SA 4.0**, the terms of their strictest training sets.
 - Training data is not distributed here. Parts of it are CC BY-NC-SA; a model trained on it inherits that
   question. Check before shipping anything.
 
